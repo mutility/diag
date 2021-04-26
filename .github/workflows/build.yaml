@@ -21,13 +21,8 @@ jobs:
         with:
           go-version: '^1.16'
 
-      # Runs tests with panics
       - name: test
         run: go test ./...
-
-      # Runs tests without panics
-      - name: test
-        run: go test -tags=noverify ./...
 
       - name: coverpkg
         uses: mutility/coverpkg@v1
