@@ -2,6 +2,8 @@
 
 Diag provides an interface adapter for command line applications to issue diagnostic output. The application can issue debug, warning, and error messages using wrappers similar to `fmt.Printf`.
 
+[![CI](https://github.com/mutility/diag/actions/workflows/build.yaml/badge.svg)](https://github.com/mutility/diag/actions/workflows/build.yaml)
+
 ## Consuming diag.Interface
 
 Import diag, and accept a `diag.Interface` or `diag.Context` in your library functions. Functions that don't accept a `context.Context` should likely accept a `diag.Interface`. Functions that otherwise would accept a `context.Context` can accept a `diag.Context` instead, or can keep them separate by accepting both a `context.Context` and a `diag.Interface`.
