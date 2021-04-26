@@ -19,8 +19,6 @@ package diag
 import (
 	"context"
 	"fmt"
-	"io"
-	"os"
 	"strconv"
 	"strings"
 )
@@ -88,59 +86,6 @@ type FullInterface interface {
 	WarningAtfer
 }
 
-// New creates an Interface wrapper for an io.Writer. Set optional DebugPrefix,
-// WarningPrefix and ErrorPrefix strings on the returned value. Set WDebug,
-// WWarning, or WError io.Writers on the returned value.
-func New(w io.Writer) *wrap {
-	if w == nil {
-		w = os.Stderr
-	}
-	return &wrap{io.Discard, w, w, "[D]", "[W]", "[E]"}
-}
-
-// New creates an Interface wrapper for an io.Writer. Set optional DebugPrefix,
-// WarningPrefix and ErrorPrefix strings on the returned value. Set WDebug,
-// WWarning, or WError io.Writers on the returned value.
-func NewDebug(w io.Writer) *wrap {
-	if w == nil {
-		w = os.Stderr
-	}
-	return &wrap{w, w, w, "[D]", "[W]", "[E]"}
-}
-
-type wrap struct {
-	WDebug        io.Writer
-	WWarning      io.Writer
-	WError        io.Writer
-	DebugPrefix   string
-	WarningPrefix string
-	ErrorPrefix   string
-}
-
-func (w *wrap) Debug(a ...interface{}) {
-	if w.DebugPrefix != "" {
-		fmt.Fprintln(w.WDebug, append([]interface{}{w.DebugPrefix}, a...)...)
-	} else {
-		fmt.Fprintln(w.WDebug, a...)
-	}
-}
-
-func (w *wrap) Warning(a ...interface{}) {
-	if w.WarningPrefix != "" {
-		fmt.Fprintln(w.WWarning, append([]interface{}{w.WarningPrefix}, a...)...)
-	} else {
-		fmt.Fprintln(w.WWarning, a...)
-	}
-}
-
-func (w *wrap) Error(a ...interface{}) {
-	if w.ErrorPrefix != "" {
-		fmt.Fprintln(w.WWarning, append([]interface{}{w.ErrorPrefix}, a...)...)
-	} else {
-		fmt.Fprintln(w.WError, a...)
-	}
-}
-
 // WithContext creates an Interface wrapper with a Context.
 func WithContext(ctx context.Context, i Interface) Context {
 	return &wrapContext{ctx, i}
@@ -187,8 +132,10 @@ func Errorf(e Errorer, format string, a ...interface{}) {
 func ErrorAt(e Errorer, file string, line, col int, a ...interface{}) {
 	if ea, ok := e.(ErrorAter); ok {
 		ea.ErrorAt(file, line, col, a...)
+	} else if ef, ok := e.(ErrorAtfer); ok {
+		ef.ErrorAtf(file, line, col, "%s", fmt.Sprint(a...))
 	} else if e != nil {
-		e.Error(at(file, line, col, a)...)
+		e.Error(fillAt(file, line, col, a)...)
 	}
 }
 
@@ -199,9 +146,9 @@ func ErrorAtf(e Errorer, file string, line, col int, format string, a ...interfa
 	} else if ea, ok := e.(ErrorAter); ok {
 		ea.ErrorAt(file, line, col, fmt.Sprintf(format, a...))
 	} else if ef, ok := e.(Errorfer); ok {
-		ef.Errorf(atf(file, line, col, format), a...)
+		ef.Errorf(fillAtf(file, line, col, format), a...)
 	} else if e != nil {
-		e.Error(fmt.Sprintf(atf(file, line, col, format), a...))
+		e.Error(fmt.Sprintf(fillAtf(file, line, col, format), a...))
 	}
 }
 
@@ -225,8 +172,10 @@ func Warningf(w Warninger, format string, a ...interface{}) {
 func WarningAt(w Warninger, file string, line, col int, a ...interface{}) {
 	if wa, ok := w.(WarningAter); ok {
 		wa.WarningAt(file, line, col, a...)
+	} else if wf, ok := w.(WarningAtfer); ok {
+		wf.WarningAtf(file, line, col, "%s", fmt.Sprint(a...))
 	} else if w != nil {
-		w.Warning(at(file, line, col, a)...)
+		w.Warning(fillAt(file, line, col, a)...)
 	}
 }
 
@@ -237,15 +186,18 @@ func WarningAtf(w Warninger, file string, line, col int, format string, a ...int
 	} else if wa, ok := w.(WarningAter); ok {
 		wa.WarningAt(file, line, col, fmt.Sprintf(format, a...))
 	} else if wf, ok := w.(Warningfer); ok {
-		wf.Warningf(atf(file, line, col, format), a...)
+		wf.Warningf(fillAtf(file, line, col, format), a...)
 	} else if w != nil {
-		w.Warning(fmt.Sprintf(atf(file, line, col, format), a...))
+		w.Warning(fmt.Sprintf(fillAtf(file, line, col, format), a...))
 	}
 }
 
-func at(file string, line, col int, a []interface{}) []interface{} {
+// FormatAtBracket returns a substring of `[{{ file }}:{{ line }}.{{ col }}]`
+// It terminates the inner string at the first zero value, and returns nothing
+// if file is empty.
+func FormatAtBracket(file string, line, col int) string {
 	if file == "" {
-		return a
+		return ""
 	}
 	loc := "[" + file
 	if line != 0 {
@@ -255,20 +207,31 @@ func at(file string, line, col int, a []interface{}) []interface{} {
 		}
 	}
 	loc += "]"
-	return append([]interface{}{loc}, a...)
+	return loc
 }
 
-func atf(file string, line, col int, format string) string {
-	if file == "" {
+// FormatAt globally specifies the format used for At information with
+// diag.Interfaces that don't implement ...At variants. Defaults to FallbackAt.
+//
+// This is intended for optional overridding by package main. The first empty
+// or zero value of file, line, and col indicate the rest should also be
+// ignored, but this is not enforced by diag.
+//
+// If you need different behaviors for warning and error, you should implement
+// the ...At variants directly.
+var FormatAt = FormatAtBracket
+
+func fillAt(file string, line, col int, a []interface{}) []interface{} {
+	if loc := FormatAt(file, line, col); loc != "" {
+		return append([]interface{}{loc}, a...)
+	}
+	return a
+}
+
+func fillAtf(file string, line, col int, format string) string {
+	loc := FormatAt(file, line, col)
+	if loc == "" {
 		return format
 	}
-	loc := "[" + strings.ReplaceAll(file, "%", "%%")
-	if line != 0 {
-		loc += ":" + strconv.Itoa(line)
-		if col != 0 {
-			loc += "." + strconv.Itoa(col)
-		}
-	}
-	loc += "] " + format
-	return loc
+	return strings.ReplaceAll(loc, "%", "%%") + " " + format
 }
