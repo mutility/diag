@@ -39,7 +39,7 @@ func DoContext(ctx diag.Context) {
 
 The `testdiag` package provides functions `Interface`, `Context`, and `WithContext` that adapt a `testing.TB` to `diag.Interface`, `diag.Context` (using `context.Background`), and `diag.Context` (using a supplied context) respectively.
 
-If you prefer to capture and process the output, you can instead wrap a `strings.Builder` or other `io.Writer` with `diag.New`.
+If you prefer to capture and process the output, you can instead wrap a `strings.Builder` or other `io.Writer` with `diag.NewWriter` or `diag.NewWriters`. If you want prefixes, wrap the writer first with `diag.NewPrefixed`.
 
 Alternately, the functions in `diag` politely do nothing if a nil is passed as the `diag.Interface`. (Just make sure to pass the untyped nil, not a typed nil, unless that type's implementation works with an underlying nil pointer.)
 
