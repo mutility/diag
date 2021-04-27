@@ -47,7 +47,7 @@ Alternately, the functions in `diag` politely do nothing if a nil is passed as t
 
 ## Implementing diag.Interface
 
-You can implement anything between `diag.Interface` and `diag.FullInterface`, and the functions in `diag` will make up the difference. As an example, you can see the `testdiag` implementation inclues only `Debug`, `Warning`, and `Error` methods that each call `tb.Log`.
+You can implement anything between `diag.Interface` and `diag.FullInterface`, and the functions in `diag` will make up the difference. As an example, you can see the `testdiag` implementation inclues only `Debug`, `Pring`, `Warning`, and `Error` methods that each call `tb.Log`.
 
 ## Inspiration
 

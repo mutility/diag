@@ -44,6 +44,7 @@ type (
 	WarningAtfer interface {
 		WarningAtf(string, int, int, string, ...interface{})
 	}
+	ValueMasker interface{ MaskValue(string) }
 )
 
 // Interface includes the core diagnostic methods. All functions in diag
@@ -89,6 +90,7 @@ type FullInterface interface {
 	Warningfer
 	WarningAter
 	WarningAtfer
+	ValueMasker
 }
 
 // WithContext creates an Interface wrapper with a Context.
@@ -104,112 +106,194 @@ type wrapContext struct {
 // Debug outputs a debug message, unless d is nil.
 func Debug(d Debugger, a ...interface{}) {
 	if d != nil {
-		d.Debug(a...)
+		if h := thelper(d); h != nil {
+			h()
+		}
+		m := mask(d)
+		d.Debug(m.Args(a)...)
 	}
 }
 
 // Debugf outputs a formatted debug message, unless d is nil.
 func Debugf(d Debugger, format string, a ...interface{}) {
+	if h := thelper(d); h != nil {
+		h()
+	}
 	if df, ok := d.(Debugfer); ok {
-		df.Debugf(format, a...)
+		m := mask(d)
+		df.Debugf(m.Format(format), m.Args(a)...)
 	} else if d != nil {
-		d.Debug(fmt.Sprintf(format, a...))
+		m := mask(d)
+		d.Debug(fmt.Sprintf(m.Format(format), m.Args(a)...))
 	}
 }
 
 // Print outputs a message, unless p is nil.
-func Print(p Printer, a ...interface{}) {
-	if p != nil {
-		p.Print(a...)
+//
+// "Ideally" p would be a Printer instead of an Interface, but it was added late.
+func Print(p Interface, a ...interface{}) {
+	if p, ok := p.(Printer); ok {
+		if h := thelper(p); h != nil {
+			h()
+		}
+		p.Print(mask(p).Args(a)...)
 	}
 }
 
 // Printf outputs a formatted message, unless p is nil.
-func Printf(p Printer, format string, a ...interface{}) {
+//
+// "Ideally" p would be a Printer instead of an Interface, but it was added late.
+func Printf(p Interface, format string, a ...interface{}) {
+	if h := thelper(p); h != nil {
+		h()
+	}
 	if pf, ok := p.(Printfer); ok {
-		pf.Printf(format, a...)
-	} else if p != nil {
-		p.Print(fmt.Sprintf(format, a...))
+		m := mask(p)
+		pf.Printf(m.Format(format), m.Args(a)...)
+	} else if p, ok := p.(Printer); ok {
+		m := mask(p)
+		p.Print(fmt.Sprintf(m.Format(format), m.Args(a)...))
 	}
 }
 
 // Error outputs an error message, unless e is nil.
 func Error(e Errorer, a ...interface{}) {
 	if e != nil {
-		e.Error(a...)
+		if h := thelper(e); h != nil {
+			h()
+		}
+		e.Error(mask(e).Args(a)...)
 	}
 }
 
 // Errorf outputs a formatted error message, unless e is nil.
 func Errorf(e Errorer, format string, a ...interface{}) {
+	if h := thelper(e); h != nil {
+		h()
+	}
 	if ef, ok := e.(Errorfer); ok {
-		ef.Errorf(format, a...)
+		m := mask(e)
+		ef.Errorf(m.Format(format), m.Args(a)...)
 	} else if e != nil {
-		e.Error(fmt.Sprintf(format, a...))
+		m := mask(e)
+		e.Error(fmt.Sprintf(m.Format(format), m.Args(a)...))
 	}
 }
 
 // ErrorAt outputs an error message with location, unless e is nil.
 func ErrorAt(e Errorer, file string, line, col int, a ...interface{}) {
+	if h := thelper(e); h != nil {
+		h()
+	}
 	if ea, ok := e.(ErrorAter); ok {
-		ea.ErrorAt(file, line, col, a...)
+		ea.ErrorAt(file, line, col, mask(e).Args(a)...)
 	} else if ef, ok := e.(ErrorAtfer); ok {
-		ef.ErrorAtf(file, line, col, "%s", fmt.Sprint(a...))
+		ef.ErrorAtf(file, line, col, "%s", fmt.Sprint(mask(e).Args(a)...))
 	} else if e != nil {
-		e.Error(fillAt(file, line, col, a)...)
+		e.Error(fillAt(file, line, col, mask(e).Args(a))...)
 	}
 }
 
 // ErrorAtf outputs a formatted error message with location, unless e is nil.
 func ErrorAtf(e Errorer, file string, line, col int, format string, a ...interface{}) {
+	if h := thelper(e); h != nil {
+		h()
+	}
 	if eaf, ok := e.(ErrorAtfer); ok {
-		eaf.ErrorAtf(file, line, col, format, a...)
+		m := mask(e)
+		eaf.ErrorAtf(file, line, col, m.Format(format), m.Args(a)...)
 	} else if ea, ok := e.(ErrorAter); ok {
-		ea.ErrorAt(file, line, col, fmt.Sprintf(format, a...))
+		m := mask(e)
+		ea.ErrorAt(file, line, col, fmt.Sprintf(m.Format(format), m.Args(a)...))
 	} else if ef, ok := e.(Errorfer); ok {
-		ef.Errorf(fillAtf(file, line, col, format), a...)
+		m := mask(e)
+		ef.Errorf(fillAtf(file, line, col, m.Format(format)), m.Args(a)...)
 	} else if e != nil {
-		e.Error(fmt.Sprintf(fillAtf(file, line, col, format), a...))
+		m := mask(e)
+		e.Error(fmt.Sprintf(fillAtf(file, line, col, m.Format(format)), m.Args(a)...))
 	}
 }
 
 // Warning outputs an warning message, unless w is nil.
 func Warning(w Warninger, a ...interface{}) {
 	if w != nil {
-		w.Warning(a...)
+		if h := thelper(w); h != nil {
+			h()
+		}
+		w.Warning(mask(w).Args(a)...)
 	}
 }
 
 // Warningf outputs a formatted warning message, unless w is nil.
 func Warningf(w Warninger, format string, a ...interface{}) {
+	if h := thelper(w); h != nil {
+		h()
+	}
 	if wf, ok := w.(Warningfer); ok {
-		wf.Warningf(format, a...)
+		m := mask(w)
+		wf.Warningf(m.Format(format), m.Args(a)...)
 	} else if w != nil {
-		w.Warning(fmt.Sprintf(format, a...))
+		m := mask(w)
+		w.Warning(fmt.Sprintf(m.Format(format), m.Args(a)...))
 	}
 }
 
 // WarningAt outputs an warning message with location, unless w is nil.
 func WarningAt(w Warninger, file string, line, col int, a ...interface{}) {
+	if h := thelper(w); h != nil {
+		h()
+	}
 	if wa, ok := w.(WarningAter); ok {
-		wa.WarningAt(file, line, col, a...)
+		wa.WarningAt(file, line, col, mask(w).Args(a)...)
 	} else if wf, ok := w.(WarningAtfer); ok {
-		wf.WarningAtf(file, line, col, "%s", fmt.Sprint(a...))
+		wf.WarningAtf(file, line, col, "%s", fmt.Sprint(mask(w).Args(a)...))
 	} else if w != nil {
-		w.Warning(fillAt(file, line, col, a)...)
+		w.Warning(fillAt(file, line, col, mask(w).Args(a))...)
 	}
 }
 
 // WarningAtf outputs a formatted warning message with location, unless w is nil.
 func WarningAtf(w Warninger, file string, line, col int, format string, a ...interface{}) {
+	if h := thelper(w); h != nil {
+		h()
+	}
 	if waf, ok := w.(WarningAtfer); ok {
-		waf.WarningAtf(file, line, col, format, a...)
+		m := mask(w)
+		waf.WarningAtf(file, line, col, m.Format(format), m.Args(a)...)
 	} else if wa, ok := w.(WarningAter); ok {
-		wa.WarningAt(file, line, col, fmt.Sprintf(format, a...))
+		m := mask(w)
+		wa.WarningAt(file, line, col, fmt.Sprintf(m.Format(format), m.Args(a)...))
 	} else if wf, ok := w.(Warningfer); ok {
-		wf.Warningf(fillAtf(file, line, col, format), a...)
+		m := mask(w)
+		wf.Warningf(fillAtf(file, line, col, m.Format(format)), m.Args(a)...)
 	} else if w != nil {
-		w.Warning(fmt.Sprintf(fillAtf(file, line, col, format), a...))
+		m := mask(w)
+		w.Warning(fmt.Sprintf(fillAtf(file, line, col, m.Format(format)), m.Args(a)...))
+	}
+}
+
+// MaskValue requests that instances of v are obscured from output. If d
+// implements ValueMasker, it fully owns the implementation. If d does not
+// implement ValueMasker, then diag will obscure non-overlapping v from string
+// arguments to the various output functions. (Print, Debugf, WarningAt, etc.)
+//
+// Diag will not obscure filenames passed to the ...At or ...Atf variants, nor
+// will it attempt to obscure arguments that combine to form a requested masked
+// value.
+func MaskValue(d Interface, v string) {
+	if m, ok := d.(ValueMasker); ok {
+		m.MaskValue(v)
+	} else if d != nil {
+		if maskers == nil {
+			maskers = make(map[interface{}]*masker)
+		}
+		m := maskers[d]
+		if m == nil {
+			m = &masker{}
+			maskers[d] = m
+		}
+		m.masked = append(m.masked, v, "***")
+		m.repl = nil
 	}
 }
 
@@ -255,4 +339,54 @@ func fillAtf(file string, line, col int, format string) string {
 		return format
 	}
 	return strings.ReplaceAll(loc, "%", "%%") + " " + format
+}
+
+// thelper retrieves a t.Helper() method if i implements it. This allows
+// diag to use t.Helper() to disappear from the logging locations.
+func thelper(i interface{}) func() {
+	if h, ok := i.(interface {
+		Helper()
+	}); ok {
+		return h.Helper
+	}
+	return nil
+}
+
+type masker struct {
+	masked []string
+	repl   *strings.Replacer
+}
+
+var maskers map[interface{}]*masker
+
+func mask(d interface{}) *masker {
+	m := maskers[d]
+	if m == nil || len(m.masked) == 0 {
+		return nil
+	}
+	if m.repl == nil {
+		m.repl = strings.NewReplacer(m.masked...)
+	}
+	return m
+}
+
+func (m *masker) Args(a []interface{}) []interface{} {
+	if m == nil {
+		return a
+	}
+	repl := m.repl
+	a = append([]interface{}(nil), a...)
+	for i := range a {
+		if s, ok := a[i].(string); ok {
+			a[i] = repl.Replace(s)
+		}
+	}
+	return a
+}
+
+func (m *masker) Format(format string) string {
+	if m == nil {
+		return format
+	}
+	return m.repl.Replace(format)
 }
