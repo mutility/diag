@@ -33,5 +33,6 @@ func WithContext(ctx context.Context, tb testlog) diag.Context {
 }
 
 func (d testDiag) Debug(args ...interface{})   { d.t.Helper(); d.t.Log(args...) }
+func (d testDiag) Print(args ...interface{})   { d.t.Helper(); d.t.Log(args...) }
 func (d testDiag) Warning(args ...interface{}) { d.t.Helper(); d.t.Log(args...) }
 func (d testDiag) Error(args ...interface{})   { d.t.Helper(); d.t.Log(args...) }

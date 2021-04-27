@@ -17,6 +17,8 @@ func TestNil(t *testing.T) {
 	for name, fn := range map[string]func(){
 		"Debug":      func() { diag.Debug(nil, args...) },
 		"Debugf":     func() { diag.Debugf(nil, format, args...) },
+		"Print":      func() { diag.Print(nil, args...) },
+		"Printf":     func() { diag.Printf(nil, format, args...) },
 		"Warning":    func() { diag.Warning(nil, args...) },
 		"WarningAt":  func() { diag.WarningAt(nil, file, line, col, args...) },
 		"Warningf":   func() { diag.Warningf(nil, format, args...) },
@@ -47,6 +49,8 @@ func TestFill(t *testing.T) {
 	for name, fn := range map[string]func() string{
 		"Debug":      func() string { diag.Debug(d, args...); return d.debug() },
 		"Debugf":     func() string { diag.Debugf(d, format, args...); return d.debug() },
+		"Print":      func() string { diag.Print(d, args...); return d.print() },
+		"Printf":     func() string { diag.Printf(d, format, args...); return d.print() },
 		"Warning":    func() string { diag.Warning(d, args...); return d.warning() },
 		"WarningAt":  func() string { diag.WarningAt(d, file, line, col, args...); return d.warning() },
 		"Warningf":   func() string { diag.Warningf(d, format, args...); return d.warning() },
@@ -73,13 +77,15 @@ func TestFill(t *testing.T) {
 }
 
 type fill struct {
-	d, w, e string
+	d, p, w, e string
 }
 
 func (f *fill) Debug(a ...interface{})   { f.d = fmt.Sprintln(a...) }
+func (f *fill) Print(a ...interface{})   { f.p = fmt.Sprintln(a...) }
 func (f *fill) Warning(a ...interface{}) { f.w = fmt.Sprintln(a...) }
 func (f *fill) Error(a ...interface{})   { f.e = fmt.Sprintln(a...) }
 func (f *fill) debug() string            { s := f.d; f.d = ""; return s }
+func (f *fill) print() string            { s := f.p; f.p = ""; return s }
 func (f *fill) warning() string          { s := f.w; f.w = ""; return s }
 func (f *fill) error() string            { s := f.e; f.e = ""; return s }
 
@@ -152,6 +158,8 @@ func TestFallback(t *testing.T) {
 			}
 			test("Debug", func() { diag.Debug(d, "d") }, "Debug"+wants.base)
 			test("Debugf", func() { diag.Debugf(d, "d") }, "Debug"+wants.f)
+			test("Print", func() { diag.Print(d, "d") }, "Print"+wants.base)
+			test("Printf", func() { diag.Printf(d, "d") }, "Print"+wants.f)
 			test("Warning", func() { diag.Warning(d, "d") }, "Warning"+wants.base)
 			test("Warningf", func() { diag.Warningf(d, "d") }, "Warning"+wants.f)
 			test("WarningAt", func() { diag.WarningAt(d, "f", 1, 2, "d") }, "Warning"+wants.at)
@@ -168,6 +176,8 @@ type hasf struct{ called *string }
 
 func (h *hasf) Debug(...interface{})            { *h.called = "Debug" }
 func (h *hasf) Debugf(string, ...interface{})   { *h.called = "Debugf" }
+func (h *hasf) Print(...interface{})            { *h.called = "Print" }
+func (h *hasf) Printf(string, ...interface{})   { *h.called = "Printf" }
 func (h *hasf) Warning(...interface{})          { *h.called = "Warning" }
 func (h *hasf) Warningf(string, ...interface{}) { *h.called = "Warningf" }
 func (h *hasf) Error(...interface{})            { *h.called = "Error" }
@@ -178,6 +188,8 @@ type hasat struct{ called *string }
 
 func (h *hasat) Debug(...interface{})                       { *h.called = "Debug" }
 func (h *hasat) DebugAt(string, int, int, ...interface{})   { *h.called = "DebugAt" }
+func (h *hasat) Print(...interface{})                       { *h.called = "Print" }
+func (h *hasat) PrintAt(string, int, int, ...interface{})   { *h.called = "PrintAt" }
 func (h *hasat) Warning(...interface{})                     { *h.called = "Warning" }
 func (h *hasat) WarningAt(string, int, int, ...interface{}) { *h.called = "WarningAt" }
 func (h *hasat) Error(...interface{})                       { *h.called = "Error" }
@@ -188,6 +200,8 @@ type hasatf struct{ called *string }
 
 func (h *hasatf) Debug(...interface{})                                { *h.called = "Debug" }
 func (h *hasatf) DebugAtf(string, int, int, string, ...interface{})   { *h.called = "DebugAtf" }
+func (h *hasatf) Print(...interface{})                                { *h.called = "Print" }
+func (h *hasatf) PrintAtf(string, int, int, string, ...interface{})   { *h.called = "PrintAtf" }
 func (h *hasatf) Warning(...interface{})                              { *h.called = "Warning" }
 func (h *hasatf) WarningAtf(string, int, int, string, ...interface{}) { *h.called = "WarningAtf" }
 func (h *hasatf) Error(...interface{})                                { *h.called = "Error" }
