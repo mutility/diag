@@ -76,6 +76,44 @@ func TestFill(t *testing.T) {
 	}
 }
 
+// TestFillMask ensures that ...f, ...At, and ...Atf methods are wired to the underlying
+func TestFillMask(t *testing.T) {
+	d := &fill{}
+	diag.MaskValue(d, "abc")
+	format := "%s%s%s %q"
+	args := []interface{}{"a", "b", "c", "abc"}
+	file := "somefile.abc"
+	line, col := 6, 0
+	for name, fn := range map[string]func() string{
+		"Debug":      func() string { diag.Debug(d, args...); return d.debug() },
+		"Debugf":     func() string { diag.Debugf(d, format, args...); return d.debug() },
+		"Print":      func() string { diag.Print(d, args...); return d.print() },
+		"Printf":     func() string { diag.Printf(d, format, args...); return d.print() },
+		"Warning":    func() string { diag.Warning(d, args...); return d.warning() },
+		"WarningAt":  func() string { diag.WarningAt(d, file, line, col, args...); return d.warning() },
+		"Warningf":   func() string { diag.Warningf(d, format, args...); return d.warning() },
+		"WarningAtf": func() string { diag.WarningAtf(d, file, line, col, format, args...); return d.warning() },
+		"Error":      func() string { diag.Error(d, args...); return d.error() },
+		"ErrorAt":    func() string { diag.ErrorAt(d, file, line, col, args...); return d.error() },
+		"Errorf":     func() string { diag.Errorf(d, format, args...); return d.error() },
+		"ErrorAtf":   func() string { diag.ErrorAtf(d, file, line, col, format, args...); return d.error() },
+	} {
+		t.Run(name, func(t *testing.T) {
+			suffix := strings.TrimPrefix(name, "Wa")[5:]
+			got := fn()
+			want := map[string]string{
+				"":    "a b c ***\n",
+				"f":   "abc \"***\"\n",
+				"At":  "[somefile.abc:6] a b c ***\n",
+				"Atf": "[somefile.abc:6] abc \"***\"\n",
+			}[suffix]
+			if got != want {
+				t.Errorf("got %q; want %q", got, want)
+			}
+		})
+	}
+}
+
 type fill struct {
 	d, p, w, e string
 }
