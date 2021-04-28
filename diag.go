@@ -26,6 +26,8 @@ import (
 type (
 	Debugger  interface{ Debug(...interface{}) }
 	Debugfer  interface{ Debugf(string, ...interface{}) }
+	Printer   interface{ Print(...interface{}) }
+	Printfer  interface{ Printf(string, ...interface{}) }
 	Errorer   interface{ Error(...interface{}) }
 	Errorfer  interface{ Errorf(string, ...interface{}) }
 	ErrorAter interface {
@@ -44,10 +46,11 @@ type (
 	}
 )
 
-// Interface includes the three core diagnostic methods. All functions in diag
+// Interface includes the core diagnostic methods. All functions in diag
 // can function on top of these.
 type Interface interface {
 	Debugger
+	Printer
 	Errorer
 	Warninger
 }
@@ -81,6 +84,8 @@ type FullInterface interface {
 	Errorfer
 	ErrorAter
 	ErrorAtfer
+	Printer  // added:1.1
+	Printfer // added:1.1
 	Warningfer
 	WarningAter
 	WarningAtfer
@@ -109,6 +114,22 @@ func Debugf(d Debugger, format string, a ...interface{}) {
 		df.Debugf(format, a...)
 	} else if d != nil {
 		d.Debug(fmt.Sprintf(format, a...))
+	}
+}
+
+// Print outputs a message, unless p is nil.
+func Print(p Printer, a ...interface{}) {
+	if p != nil {
+		p.Print(a...)
+	}
+}
+
+// Printf outputs a formatted message, unless p is nil.
+func Printf(p Printer, format string, a ...interface{}) {
+	if pf, ok := p.(Printfer); ok {
+		pf.Printf(format, a...)
+	} else if p != nil {
+		p.Print(fmt.Sprintf(format, a...))
 	}
 }
 
