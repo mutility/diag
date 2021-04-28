@@ -12,7 +12,10 @@ func TestExample(t *testing.T) {
 
 	diag.MaskValue(td, "haha")
 
-	diag.Print(td, "ha")     // logs "ha"
-	diag.Printf(td, "haha")  // logs "***"
-	diag.Print(td, "hahaha") // logs "***ha"
+	diag.Print(td, "ha")                               // logs "ha"
+	diag.Printf(td, "haha")                            // logs "***"
+	diag.Group(td, "hahaha", func(td diag.Interface) { // logs: "***ha:"
+		diag.Warning(td, "hahaha") // logs "  ***ha"
+	})
+	diag.Print(td, "hahahahaha") // logs "******ha"
 }

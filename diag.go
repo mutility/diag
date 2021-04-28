@@ -44,6 +44,12 @@ type (
 	WarningAtfer interface {
 		WarningAtf(string, int, int, string, ...interface{})
 	}
+	Grouper interface {
+		Group(string, func(Interface))
+	}
+	GroupContexter interface {
+		GroupContext(string, func(Context))
+	}
 	ValueMasker interface{ MaskValue(string) }
 )
 
@@ -85,6 +91,7 @@ type FullInterface interface {
 	Errorfer
 	ErrorAter
 	ErrorAtfer
+	Grouper  // added:1.2
 	Printer  // added:1.1
 	Printfer // added:1.1
 	Warningfer

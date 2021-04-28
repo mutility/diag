@@ -114,6 +114,48 @@ func TestFillMask(t *testing.T) {
 	}
 }
 
+// TestFillGroup ensures that ...f, ...At, and ...Atf methods are handled by Group
+func TestFillGroup(t *testing.T) {
+	d := &fill{}
+	diag.Group(d, "group", func(g diag.Interface) {
+		if got, want := d.print(), "group:\n"; got != want {
+			t.Errorf("begin: got %q, want %q", got, want)
+		}
+		format := "%s %v %d%v"
+		args := []interface{}{"a", "b", 2, 3}
+		file := "somefile.md"
+		line, col := 6, 0
+		for name, fn := range map[string]func() string{
+			"Debug":      func() string { diag.Debug(g, args...); return d.debug() },
+			"Debugf":     func() string { diag.Debugf(g, format, args...); return d.debug() },
+			"Print":      func() string { diag.Print(g, args...); return d.print() },
+			"Printf":     func() string { diag.Printf(g, format, args...); return d.print() },
+			"Warning":    func() string { diag.Warning(g, args...); return d.warning() },
+			"WarningAt":  func() string { diag.WarningAt(g, file, line, col, args...); return d.warning() },
+			"Warningf":   func() string { diag.Warningf(g, format, args...); return d.warning() },
+			"WarningAtf": func() string { diag.WarningAtf(g, file, line, col, format, args...); return d.warning() },
+			"Error":      func() string { diag.Error(g, args...); return d.error() },
+			"ErrorAt":    func() string { diag.ErrorAt(g, file, line, col, args...); return d.error() },
+			"Errorf":     func() string { diag.Errorf(g, format, args...); return d.error() },
+			"ErrorAtf":   func() string { diag.ErrorAtf(g, file, line, col, format, args...); return d.error() },
+		} {
+			t.Run(name, func(t *testing.T) {
+				suffix := strings.TrimPrefix(name, "Wa")[5:]
+				got := fn()
+				want := map[string]string{
+					"":    "  a b 2 3\n",
+					"f":   "  a b 23\n",
+					"At":  "[somefile.md:6]   a b 2 3\n",
+					"Atf": "[somefile.md:6]   a b 23\n",
+				}[suffix]
+				if got != want {
+					t.Errorf("got %q; want %q", got, want)
+				}
+			})
+		}
+	})
+}
+
 type fill struct {
 	d, p, w, e string
 }
@@ -265,5 +307,70 @@ func TestPrefix(t *testing.T) {
 				t.Errorf("got %q; want %q", got, want)
 			}
 		})
+	}
+}
+
+// TestWriter verifies that NewWriter* do the expected.
+func TestWriter(t *testing.T) {
+	for _, tt := range []struct {
+		name string
+		want []string
+		test func(func(diag.Interface)) []string
+	}{
+		{
+			"NewWriter",
+			[]string{"print\nwarning\nerror\n"},
+			func(fn func(diag.Interface)) []string {
+				sb := strings.Builder{}
+				fn(diag.NewWriter(&sb))
+				return []string{sb.String()}
+			},
+		},
+		{
+			"NewWriterDebug",
+			[]string{"debug\nprint\nwarning\nerror\n"},
+			func(fn func(diag.Interface)) []string {
+				sb := strings.Builder{}
+				fn(diag.NewWriterDebug(&sb))
+				return []string{sb.String()}
+			},
+		},
+		{
+			"NewWriters",
+			[]string{"debug\n", "print\nwarning\n", "error\n"},
+			func(fn func(diag.Interface)) []string {
+				d, w, e := strings.Builder{}, strings.Builder{}, strings.Builder{}
+				fn(diag.NewWriters(&e, &w, &d))
+				return []string{d.String(), w.String(), e.String()}
+			},
+		},
+		{
+			"NewWriters4",
+			[]string{"debug\n", "print\n", "warning\n", "error\n"},
+			func(fn func(diag.Interface)) []string {
+				d, p, w, e := strings.Builder{}, strings.Builder{}, strings.Builder{}, strings.Builder{}
+				fn(diag.NewWriters4(&e, &w, &p, &d))
+				return []string{d.String(), p.String(), w.String(), e.String()}
+			},
+		},
+	} {
+		got := tt.test(func(d diag.Interface) {
+			diag.Debug(d, "debug")
+			diag.Print(d, "print")
+			diag.Warning(d, "warning")
+			diag.Error(d, "error")
+		})
+		if len(got) != len(tt.want) {
+			t.Errorf("%s: got %d, want %d", tt.name, len(got), len(tt.want))
+		}
+		for i := 0; i < len(got) || i < len(tt.want); i++ {
+			if i >= len(got) {
+				t.Errorf("%s[%d]: missing %q", tt.name, i, tt.want[i])
+			} else if i >= len(tt.want) {
+				t.Errorf("%s[%d]: extra %q", tt.name, i, got[i])
+			} else if got[i] != tt.want[i] {
+				t.Errorf("%s[%d] got %q; want %q", tt.name, i, got[i], tt.want[i])
+			}
+		}
 	}
 }
