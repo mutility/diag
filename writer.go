@@ -8,27 +8,37 @@ import (
 // NewWriter creates an Interface wrapper for an io.Writer. It will write
 // Error and Warning messages to w, and discard Debug messages.
 func NewWriter(w io.Writer) *wrap {
-	return &wrap{io.Discard, w, w}
+	return &wrap{io.Discard, w, w, w}
 }
 
 // NewWriterDebug creates an Interface wrapper for an io.Writer. It will write
 // Error, Warning and Debug messages to w.
 func NewWriterDebug(w io.Writer) *wrap {
-	return &wrap{w, w, w}
+	return &wrap{w, w, w, w}
 }
 
 // NewWriters creates an Interface wrapper for io.Writers. It will write Error,
-// Warning and Debug messages to their respective streams.
+// Warning/Print and Debug messages to their respective streams.
 func NewWriters(errors, warnings, debugs io.Writer) *wrap {
-	return &wrap{debugs, warnings, errors}
+	return NewWriters4(errors, warnings, warnings, debugs)
+}
+
+// NewWriters4 creates an Interface wrapper for io.Writers. It will write Error,
+// Warning, Print and Debug messages to their respective streams.
+func NewWriters4(errors, warnings, prints, debugs io.Writer) *wrap {
+	return &wrap{wd: debugs, wp: prints, ww: warnings, we: errors}
 }
 
 type wrap struct {
-	wd, ww, we io.Writer
+	wd, wp, ww, we io.Writer
 }
 
 func (w *wrap) Debug(a ...interface{}) {
 	fmt.Fprintln(w.wd, a...)
+}
+
+func (w *wrap) Print(a ...interface{}) {
+	fmt.Fprintln(w.wp, a...)
 }
 
 func (w *wrap) Warning(a ...interface{}) {
