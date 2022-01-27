@@ -11,6 +11,9 @@ on:
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
+permissions:
+  pull-requests: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -31,11 +34,3 @@ jobs:
           token: ${{ github.token }}
           groupby: file
           comment: replace
-
-      - name: Store Coverage
-        id: coverpkg-artifacts
-        if: ${{ steps.coverpkg.outputs.comment-failed == 403 }}
-        uses: actions/upload-artifact@v2
-        with:
-          name: coverpkg
-          path: ${{ steps.coverpkg.outputs.artifacts }}/
