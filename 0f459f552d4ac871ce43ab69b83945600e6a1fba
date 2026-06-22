@@ -1,0 +1,1 @@
+{"github.com/mutility/diag/diag.go":{"Count":141,"Covered":129},"github.com/mutility/diag/grouped.go":{"Count":48,"Covered":30},"github.com/mutility/diag/testdiag/testdiag.go":{"Count":11,"Covered":5},"github.com/mutility/diag/writer.go":{"Count":13,"Covered":13}}
